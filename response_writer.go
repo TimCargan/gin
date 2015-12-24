@@ -38,14 +38,23 @@ type (
 
 		// Forces to write the http header (status code + headers).
 		WriteHeaderNow()
+
+		// Before allows for a function to be called before the ResponseWriter has been written to. This is
+		// useful for setting headers or any other operations that must happen before a response has been written.
+		Before(func(ResponseWriter))
+
 	}
+
+	beforeFunc func(ResponseWriter)
 
 	responseWriter struct {
 		http.ResponseWriter
 		size   int
 		status int
+		beforeFuncs []beforeFunc
 	}
 )
+
 
 var _ ResponseWriter = &responseWriter{}
 
@@ -56,6 +65,7 @@ func (w *responseWriter) reset(writer http.ResponseWriter) {
 }
 
 func (w *responseWriter) WriteHeader(code int) {
+	w.callBefore()
 	if code > 0 && w.status != code {
 		if w.Written() {
 			debugPrint("[WARNING] Headers were already written. Wanted to override status code %d with %d", w.status, code)
@@ -114,3 +124,14 @@ func (w *responseWriter) CloseNotify() <-chan bool {
 func (w *responseWriter) Flush() {
 	w.ResponseWriter.(http.Flusher).Flush()
 }
+
+func (rw *responseWriter) Before(before func(ResponseWriter)) {
+	rw.beforeFuncs = append(rw.beforeFuncs, before)
+}
+
+func (w *responseWriter) callBefore() {
+	for i := len(w.beforeFuncs) - 1; i >= 0; i-- {
+		w.beforeFuncs[i](w)
+	}
+}
+

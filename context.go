@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/plimble/sessions"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/gin-gonic/gin/render"
 	"github.com/manucorporat/sse"
@@ -41,7 +42,7 @@ type Context struct {
 	Params   Params
 	handlers HandlersChain
 	index    int8
-
+	sessions *sessions.Sessions
 	engine   *Engine
 	Keys     map[string]interface{}
 	Errors   errorMsgs
@@ -177,6 +178,9 @@ func (c *Context) MustGet(key string) interface{} {
 	panic("Key \"" + key + "\" does not exist")
 }
 
+func (c *Context) Sessions(name string) *sessions.Session {
+	return c.sessions.Get(name)
+}
 /************************************/
 /************ INPUT DATA ************/
 /************************************/
